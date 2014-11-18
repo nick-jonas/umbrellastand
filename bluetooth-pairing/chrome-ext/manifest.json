@@ -1,0 +1,19 @@
+{
+  "manifest_version": 2,
+
+  "name": "Umbrella Stand",
+  "description": "This extension configures your stand with your WiFi",
+  "version": "1.0",
+
+  "bluetooth": {
+    "uuids": [ "1101" ],
+    "socket": true,
+    "profiles": [ "1101" ]
+  },
+
+  "app": {
+    "background": {
+      "scripts": ["background.js"]
+    }
+  }
+}

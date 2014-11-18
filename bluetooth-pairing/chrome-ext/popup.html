@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!-- saved from url=(0080)https://developer.chrome.com/extensions/examples/tutorials/getstarted/popup.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <title>Umbrella Stand Config</title>
+
+    <link rel="stylesheet" href="./popup_files/material.css">
+    <link rel="stylesheet" href="./popup_files/spinner.css">
+    <link rel="stylesheet" href="./popup_files/main.css">
+
+    <style>
+      body {
+        min-width: 357px;
+        overflow-x: hidden;
+      }
+
+    </style>
+
+    <!--
+      - JavaScript and HTML must be in separate files: see our Content Security
+      - Policy documentation[1] for details and explanation.
+      -
+      - [1]: http://developer.chrome.com/extensions/contentSecurityPolicy.html
+     -->
+    <script src="./popup_files/jquery-1.11.1.min.js"></script>
+    <script src="./popup_files/app.js"></script>
+  </head>
+  <body data-pinterest-extension-installed="cr1.35">
+  
+  	<svg class="spinner" width="30px" height="30px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
+	   <circle class="path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30"></circle>
+	 </svg>
+
+  	<div class="button raised blue find-device">
+      <div class="center" fit>Pair Umbrella Stand</div>
+      <paper-ripple fit></paper-ripple>
+    </div>
+
+    <div id="log"></div>
+
+
+	</body>
+</html>
