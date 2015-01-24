@@ -12,13 +12,22 @@ PRECIP_PROBABILITY = 0.2
 GLOBAL_BRIGHTNESS = 1
 
 api_key = "8bfc0a79dcda808034c294cf2c89e879"
+# New York, NY
 lat = 40.7275
 lng = -73.9858
+
+# Salt Lake City, UT
+#lat = 40.75
+#lng = -111.8833
+
+# Great Falls, MT
+# lat = 47.5036
+# lng = -111.2864
 
 # color settings
 clear_day = rain = Color(116, 127, 223, 1)
 clear_night = Color(35, 45, 171, 0.2)
-fog = cloudy = Color(148, 151, 140, 0.2)
+fog = cloudy = Color(148, 151, 140, 1)
 snow = Color(255, 255, 255, 1)
 
 # setup LED s
@@ -70,14 +79,14 @@ def updateWeather():
   byHour = forecast.hourly()
   
   loopCount += 1
-  i = 0
+  i = LED_COUNT - 1
   precipHours = []
   print 'Fetched Weather Data ' + str(loopCount) + 'x (' + str(i * API_TIMER) + 's): ' + strftime("%Y-%m-%d %H:%M:%S", gmtime())
 
 
   # loop through data
   for hourlyData in byHour.data:
-    if i < LED_COUNT:
+    if i > -1:
       # setup default vars
       color = Color(0, 0, 0)
       prob = 0
@@ -92,7 +101,7 @@ def updateWeather():
 
       # handle certain non-precipitation colors
       if hasattr(hourlyData, 'icon'):
-        print 'Hour ' + str(i + 1) + ': ' + hourlyData.icon
+        print 'Hour ' + str(LED_COUNT - i) + ': ' + hourlyData.icon
         if(hourlyData.icon == 'clear-day' or hourlyData.icon == 'partly-cloudy-day'):
           color = clear_day
         if(hourlyData.icon == 'clear-night' or hourlyData.icon == 'partly-cloudy-night'):
@@ -116,7 +125,7 @@ def updateWeather():
       print color
       print '----'
       led.fill(color, i, i)    
-    i += 1
+    i -= 1
     led.update()
 
   # call function again
@@ -125,20 +134,17 @@ def updateWeather():
 # get weather
 updateWeather()
 
-
 counter = 0
 while True:
-
   counter += 1
   # flash one LED red if there is trouble connecting
   if connectionInterruptCount > CONNECTION_ATTEMPTS:
-    print "HERE", connectionInterruptCount, CONNECTION_ATTEMPTS
     strength = math.fabs(math.sin(counter * 0.002))
     led.fillRGB(0, 0, 0)
     led.fill(Color(255, 0, 0, strength), 0, 0)
   else:
     # smooth fade in & out
-    for idx, hour in enumerate(precipHours):
+    for idx, hour in enumerate(precipHours): 
       strength = math.fabs(math.sin((counter + (idx * 50)) * 0.005))
       if hour[0] == 'r':
         precipColor = rain
