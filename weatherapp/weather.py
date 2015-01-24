@@ -5,7 +5,7 @@ import math
 import threading
 from check_connection import conn
 
-LED_COUNT = 4
+LED_COUNT = 8
 API_TIMER = 60 * 5 # seconds
 CONNECTION_ATTEMPTS = 10
 PRECIP_PROBABILITY = 0.2
@@ -125,11 +125,14 @@ def updateWeather():
 # get weather
 updateWeather()
 
+
 counter = 0
 while True:
+
   counter += 1
   # flash one LED red if there is trouble connecting
   if connectionInterruptCount > CONNECTION_ATTEMPTS:
+    print "HERE", connectionInterruptCount, CONNECTION_ATTEMPTS
     strength = math.fabs(math.sin(counter * 0.002))
     led.fillRGB(0, 0, 0)
     led.fill(Color(255, 0, 0, strength), 0, 0)

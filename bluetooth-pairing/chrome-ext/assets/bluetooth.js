@@ -35,12 +35,13 @@ Bluetooth.prototype.init = function() {
   
   // Add listeners to receive newly found devices and updates
   // to the previously known devices.
-  chrome.bluetooth.onDeviceAdded.addListener(this.updateDeviceName);
-  chrome.bluetooth.onDeviceChanged.addListener(this.updateDeviceName);
-  chrome.bluetooth.onDeviceRemoved.addListener(this.removeDeviceName);
+  chrome.bluetooth.onDeviceAdded.addListener($.proxy(this.updateDeviceName, this));
+  chrome.bluetooth.onDeviceChanged.addListener($.proxy(this.updateDeviceName, this));
+  chrome.bluetooth.onDeviceRemoved.addListener($.proxy(this.removeDeviceName, this));
 
   // show current devices
   this.getDevices();
+  this.startDiscovery();
 };
 
 Bluetooth.prototype.startDiscovery = function() {
@@ -53,17 +54,17 @@ Bluetooth.prototype.startDiscovery = function() {
 };
 
 Bluetooth.prototype.updateDeviceName = function(device) {
-  if(typeof this.device_names[device.address] === 'undefined'){
+  if(typeof this.deviceNames[device.address] === 'undefined'){
     this.getDevices();
-    if(device.address === this.deviceAddress){
-      connectSocket(device);
+    if(device.address === this.addr){
+      this.connectSocket(device);
     }
   }
-  device_names[device.address] = device.name;
+  this.deviceNames[device.address] = device.name;
 };
 
 Bluetooth.prototype.removeDeviceName = function(device) {
-  delete this.device_names[device.address];
+  delete this.deviceNames[device.address];
 };
 
 // With the listeners in place, get the list of devices found in
@@ -89,9 +90,9 @@ Bluetooth.prototype.connectSocket = function(device) {
   console.log('create bluetooth socket...');
   chrome.bluetoothSocket.create(function(createInfo) {
     // console.log(createInfo.socketId, device.address, uui);
-    console.log('attempting socket connection...');
+    console.log('attempting socket connection to ' + device.address + '...');
     self.socketId = createInfo.socketId;
-    chrome.bluetoothSocket.connect(createInfo.socketId, device.address, uuid, onConnectedCallback);
+    chrome.bluetoothSocket.connect(createInfo.socketId, device.address, self.uuid, onConnectedCallback);
   
     chrome.bluetoothSocket.onAccept.addListener(function(acceptInfo) {
       if (info.socketId != createInfo.socketId)
@@ -104,11 +105,15 @@ Bluetooth.prototype.connectSocket = function(device) {
 
       // Accepted sockets are initially paused,
       // set the onReceive listener first.
-      chrome.bluetoothSocket.onReceive.addListener(onReceive);
-      chrome.bluetoothSocket.setPaused(false);
+      chrome.bluetoothSocket.onReceive.addListener(function(receiveInfo) {
+        console.log("Received " + receiveInfo.data.byteLength + " bytes");
+        var bytes = new Uint8Array(receiveInfo.data);
+        console.log("buffer = " + JSON.stringify(bytes));
+      })
+      chrome.bluetoothSocket.setPaused(acceptInfo.clientSocketId, false);
     });
 
-    chrome.bluetoothSocket.listenUsingRfcomm(createInfo.socketId, uuid, function() {
+    chrome.bluetoothSocket.listenUsingRfcomm(createInfo.socketId, self.uuid, function() {
       if (chrome.runtime.lastError) {
         console.log("Connection failed: " + chrome.runtime.lastError.message);
       }
@@ -120,18 +125,10 @@ Bluetooth.prototype.connectSocket = function(device) {
 
   });
 
-  var onReceive = function(receiveInfo){
-    console.log("Received " + receiveInfo.data.byteLength + " bytes");
-    var bytes = new Uint8Array(receiveInfo.data);
-    console.log("buffer = " + JSON.stringify(bytes));
-  }
-
   var onConnectedCallback = function() {
-    console.log('on socket connected callback...');
     if (chrome.runtime.lastError) {
       console.log("Connection failed: " + chrome.runtime.lastError.message);
     } else {
-      console.log('success!');
       chrome.bluetoothSocket.send(self.socketId, str2ab('ssid:peterpounders'), function(bytesSent){
         console.log('sent ssid: ' + bytesSent + ' bytes (max = 128)');
       });

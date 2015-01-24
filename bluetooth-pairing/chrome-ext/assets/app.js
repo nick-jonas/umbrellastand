@@ -6,16 +6,20 @@ var App = function(){
   var isDiscovering = false;
   var $spinner = $('.spinner');
   var $findDeviceButton = $('.find-device');
-
-
-  // $findDeviceButton.click(function(){
-  //   if(isDiscovering) return;
-  //   isDiscovering = true;
-  //   $('.spinner').css('display', 'block');
-  //   self.findDevices();
-  // });
-  
   var bl = new Bluetooth(DEVICE_ADDRESS);
+
+
+  $findDeviceButton.click(function(e){
+    e.preventDefault();
+    
+    if(isDiscovering) return;
+    isDiscovering = true;
+    
+    $('.spinner').css('display', 'block');
+
+    bl.startDiscovery();
+  });
+  
 };
 
 
