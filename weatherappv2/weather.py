@@ -1,27 +1,32 @@
 import forecastio # https://github.com/ZeevG/python-forecast.io
-from raspledstrip.ledstrip import *
+from dotstar import Adafruit_DotStar
+import time
 from time import gmtime, strftime
 from pprint import pprint
 from firelog import firelog
+from color import Color
 import math
 import threading
 import json
+import os, sys
 
-LED_COUNT = 8
+LED_COUNT = 7
 API_TIMER = 60 * 1 # seconds
 PRECIP_PROBABILITY = 0.2
-GLOBAL_BRIGHTNESS = 1
+GLOBAL_BRIGHTNESS = 0.25
 
 # color settings
-clear_day = rain = Color(116, 127, 223, 1)
+clear_day = rain = Color(116, 127, 223)
 clear_night = Color(35, 45, 171, 0.2)
-fog = cloudy = Color(148, 151, 140, 1)
-snow = Color(255, 255, 255, 1)
+fog = cloudy = Color(148, 151, 140)
+snow = Color(255, 255, 255)
 
 # setup LEDs
-led = LEDStrip(LED_COUNT, True)
-led.setMasterBrightness(GLOBAL_BRIGHTNESS)
-led.all_off()
+datapin   = 10
+clockpin  = 11
+strip     = Adafruit_DotStar(LED_COUNT, datapin, clockpin)
+strip.begin()           # Initialize pins for output
+strip.setBrightness(int(GLOBAL_BRIGHTNESS * 255.0)) # Limit brightness to ~1/4 duty cycle
 
 precipHours = []
 loopCount = 0
@@ -34,13 +39,13 @@ def init():
   global data, logger, lat, lng
   # load config file
   try:
-    with open('/home/pi/weather/config.json') as data_file:    
+    with open('/home/pi/weatherappv2/config.json') as data_file:    
       data = json.load(data_file)
       logger = firelog(data['product_name'], data['guid'], data)
       logger.log_status('Initialized.')
       updateWeather()
   except:
-    print "Error: Could not load config.json file"
+    print "Error: Could not load config.json file", sys.exc_info()[0]
 
 
 def stopTimer():
@@ -63,6 +68,12 @@ def updateWeather():
   global precipHours
   global data
   global active
+  global strip
+
+  print data['api_key']
+  print data['lat']
+  print data['lng']
+  print "----"
 
   try:
     # call forecast.io API to get weather
@@ -113,14 +124,13 @@ def updateWeather():
           if type == 'snow' or type == 'rain':
             color = fog
 
-        print color
-        print '----'
-        led.fill(color, i, i)    
-      i -= 1
-      led.update()
+        strip.setPixelColor(i, int(color.r), int(color.g), int(color.b))
 
-  except:
-    print "Could not connect to weather service."
+      i -= 1
+
+  except Exception as e:
+    print e.__doc__
+    print e.message
     active = False
 
 
@@ -132,24 +142,23 @@ def updateWeather():
 # initialize
 init()
 
-
-
 counter = 0
 while True:
   counter += 1
   # flash one LED red if there is trouble connecting
   if not active:
-    strength = math.fabs(math.sin(counter * 0.002))
-    led.fillRGB(0, 0, 0)
-    led.fill(Color(255, 0, 0, strength), 0, 0)
+    for num in range(1, LED_COUNT):
+      strip.setPixelColor(num, 0, 0, 0)
+    bri = math.fabs(math.sin(counter * 0.05))
+    strip.setPixelColor(0, int(255 * bri), 0, 0)
   else:
     # smooth fade in & out
     for idx, hour in enumerate(precipHours): 
-      strength = math.fabs(math.sin((counter + (idx * 50)) * 0.005))
+      bri = math.fabs(math.sin((counter + (idx * 25)) * 0.05))
       if hour[0] == 'r':
         precipColor = rain
       elif hour[0] == 's':
         precipColor = snow
-      led.fill(Color(precipColor.r, precipColor.g, precipColor.b, strength), hour[1], hour[1])
-  led.update()
-
+      strip.setPixelColor(hour[1], int(precipColor.r * bri), int(precipColor.g * bri), int(precipColor.b * bri))
+  strip.show()
+  time.sleep(1.0 / 50)             # Pause 20 milliseconds (~50 fps)
