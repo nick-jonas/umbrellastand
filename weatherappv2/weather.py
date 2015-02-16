@@ -22,9 +22,9 @@ PRECIP_PROBABILITY = 0.2
 GLOBAL_BRIGHTNESS = 0.25
 
 # color settings
-clear_day = rain = Color(100, 100, 223)
+clear_day = rain = Color(15, 50, 255)
 clear_night = Color(0, 0, 255, 0.1)
-fog = cloudy = Color(148, 151, 140)
+fog = cloudy = Color(255, 255, 255, 0.4)
 snow = Color(255, 255, 255)
 
 # setup LEDs
