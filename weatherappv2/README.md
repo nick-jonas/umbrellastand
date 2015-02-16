@@ -1,3 +1,15 @@
+## Install pip
+
+```
+sudo apt-get install python-pip
+```
+
+## Install [geocoder](https://github.com/geopy/geopy)
+
+```
+sudo pip install geopy
+```
+
 ## Install [forecast.io](https://github.com/ZeevG/python-forecast.io)
 
 ```

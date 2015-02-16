@@ -1,23 +1,29 @@
-import forecastio # https://github.com/ZeevG/python-forecast.io
-from dotstar import Adafruit_DotStar
+#!/usr/bin/python
+
+import urllib2
 import time
-from time import gmtime, strftime
-from pprint import pprint
-from firelog import firelog
-from color import Color
 import math
 import threading
 import json
 import os, sys
+import forecastio # https://github.com/ZeevG/python-forecast.io
+from dotstar import Adafruit_DotStar
+from time import gmtime, strftime
+from pprint import pprint
+from firelog import firelog
+from color import Color
+from geopy.geocoders import GoogleV3
 
+CONFIG = '/home/weather/config.json'
 LED_COUNT = 7
-API_TIMER = 60 * 1 # seconds
+API_TIMER = 60 * 10 # seconds
+CONNECTIVITY_TIMER = 15 # seconds
 PRECIP_PROBABILITY = 0.2
 GLOBAL_BRIGHTNESS = 0.25
 
 # color settings
-clear_day = rain = Color(116, 127, 223)
-clear_night = Color(35, 45, 171, 0.2)
+clear_day = rain = Color(100, 100, 223)
+clear_night = Color(0, 0, 255, 0.1)
 fog = cloudy = Color(148, 151, 140)
 snow = Color(255, 255, 255)
 
@@ -31,22 +37,69 @@ strip.setBrightness(int(GLOBAL_BRIGHTNESS * 255.0)) # Limit brightness to ~1/4 d
 precipHours = []
 loopCount = 0
 thread = None
+connectThread = None
 data = None
 logger = None
 active = False
+isInit = False
+
 
 def init():
-  global data, logger, lat, lng
-  # load config file
-  try:
-    with open('/home/pi/weatherappv2/config.json') as data_file:    
-      data = json.load(data_file)
-      logger = firelog(data['product_name'], data['guid'], data)
-      logger.log_status('Initialized.')
-      updateWeather()
-  except:
-    print "Error: Could not load config.json file", sys.exc_info()[0]
+  # logger = firelog(data['product_name'], data['guid'], data)
+  internetOn(True)
 
+def onInternetConnection():
+  global isInit
+  loadConfig()
+  getCoord()
+  updateWeather()
+  isInit = True
+
+def internetOn(loop=False):
+  global active
+  global isInit
+  try:
+    response=urllib2.urlopen('http://74.125.228.100',timeout=1)
+    active = True
+    if not isInit: onInternetConnection()
+    if loop: startConnectTimer(loop)
+    return True
+  except urllib2.URLError as err: pass
+  active = False
+  if loop: startConnectTimer(loop)
+  return False
+
+# Load the config.json file
+def loadConfig():
+  global data
+  with open(CONFIG) as data_file:
+    data = json.load(data_file)
+    print "Loaded config.json..."
+
+# Check to see if coordinates have been geocoded from zip code
+def getCoord():
+  global data
+  if data['lat'] == "" or data['lng'] == "":
+    print "Geocoding from zip:", data['zip']
+    geolocator = GoogleV3()
+    location = geolocator.geocode("10003")
+    data['lat'] = str(location.latitude)
+    data['lng'] = str(location.longitude)
+    print "Found lat/lng: ", data['lat'], data['lng'], "..."
+    # write back to file
+    with open(CONFIG, 'r+') as f:
+      d = json.load(f)
+      d['lat'] = data['lat']
+      d['lng'] = data['lng']
+      f.seek(0) # <--- reset file position to the beginning.
+      json.dump(d, f, indent=4)
+      print "Wrote lat/lng to file..."
+  else:
+    print "Lat/Lng exists, moving on..."
+
+# -------------------
+# TIMERS
+# -------------------
 
 def stopTimer():
   if thread is not None:
@@ -60,6 +113,22 @@ def startTimer():
   thread.setDaemon(True)
   thread.start()
 
+def stopConnectTimer():
+  if connectThread is not None:
+    connectThread.cancel()
+
+def startConnectTimer(isLoop):
+  global connectThread
+  global CONNECTIVITY_TIMER
+  stopConnectTimer()
+  connectThread = threading.Timer(CONNECTIVITY_TIMER, internetOn, [isLoop])
+  connectThread.setDaemon(True)
+  connectThread.start()
+
+
+# -------------------
+# GET WEATHER
+# -------------------
 def updateWeather():
   
   global loopCount
@@ -69,11 +138,6 @@ def updateWeather():
   global data
   global active
   global strip
-
-  print data['api_key']
-  print data['lat']
-  print data['lng']
-  print "----"
 
   try:
     # call forecast.io API to get weather
@@ -124,6 +188,7 @@ def updateWeather():
           if type == 'snow' or type == 'rain':
             color = fog
 
+        print int(color.r), int(color.g), int(color.b)
         strip.setPixelColor(i, int(color.r), int(color.g), int(color.b))
 
       i -= 1
@@ -132,7 +197,6 @@ def updateWeather():
     print e.__doc__
     print e.message
     active = False
-
 
   # call function again
   startTimer()

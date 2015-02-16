@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import colorsys
 
 class Color:
@@ -12,8 +14,8 @@ class Color:
             raise ValueError('Brightness must be between 0.0 and 1.0')
 
         self.r = r * bright
-        self.g = g * bright
-        self.b = b * bright
+        self.g = b * bright
+        self.b = g * bright
 
     def get_color_hsv(self):
         h, s, v = colorsys.rgb_to_hsv(self.r / 255.0,
